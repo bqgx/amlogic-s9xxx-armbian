@@ -1,5 +1,5 @@
 #==========================================================================
-# Description: Build Armbian arm64 server image
+# Description: Build Armbian arm64 server image (oec/oect)
 # Copyright (C) 2021 https://github.com/ophub/amlogic-s9xxx-armbian
 #==========================================================================
 
