@@ -8,7 +8,7 @@ GitHub Actions は Microsoft が提供するサービスであり、高性能な
 
 - [Armbian の構築と使用方法](#armbian-の構築と使用方法)
 - [目次](#目次)
-  - [1. 自分の Github アカウントを登録する](#1-自分の-github-アカウントを登録する)
+  - [1. 自分の GitHub アカウントを登録する](#1-自分の-github-アカウントを登録する)
   - [2. プライバシー変数 GITHUB\_TOKEN 等の設定](#2-プライバシー変数-github_token-等の設定)
   - [3. リポジトリをフォークしてワークフロー権限を設定する](#3-リポジトリをフォークしてワークフロー権限を設定する)
   - [4. Armbian システムのカスタマイズファイルの説明](#4-armbian-システムのカスタマイズファイルの説明)
@@ -16,7 +16,7 @@ GitHub Actions は Microsoft が提供するサービスであり、高性能な
     - [5.1 手動コンパイル](#51-手動コンパイル)
     - [5.2 定期コンパイル](#52-定期コンパイル)
     - [5.3 デフォルトシステム設定のカスタマイズ](#53-デフォルトシステム設定のカスタマイズ)
-    - [5.4 論理ボリュームを使用して Github Actions のコンパイル領域を拡張する](#54-論理ボリュームを使用して-github-actions-のコンパイル領域を拡張する)
+    - [5.4 論理ボリュームを使用して GitHub Actions のコンパイル領域を拡張する](#54-論理ボリュームを使用して-github-actions-のコンパイル領域を拡張する)
     - [5.5 Armbian Docker イメージの作成](#55-armbian-docker-イメージの作成)
   - [6. システムの保存](#6-システムの保存)
   - [7. システムのダウンロード](#7-システムのダウンロード)
@@ -92,6 +92,8 @@ GitHub Actions は Microsoft が提供するサービスであり、高性能な
         - [12.11.2.2 cm9vdA の u-boot 作成スクリプトの使用方法](#121122-cm9vda-の-u-boot-作成スクリプトの使用方法)
     - [12.12 メモリサイズの誤認識](#1212-メモリサイズの誤認識)
     - [12.13 dtb ファイルの逆コンパイル方法](#1213-dtb-ファイルの逆コンパイル方法)
+      - [12.13.1 dtb ファイルを直接逆コンパイル](#12131-dtb-ファイルを直接逆コンパイル)
+      - [12.13.2 実行中のデバイスから完全状態 DTS をエクスポート（推奨）](#12132-実行中のデバイスから完全状態-dts-をエクスポート推奨)
     - [12.14 cmdline 設定の変更方法](#1214-cmdline-設定の変更方法)
     - [12.15 新しいサポートデバイスの追加方法](#1215-新しいサポートデバイスの追加方法)
       - [12.15.1 デバイス設定ファイルの追加](#12151-デバイス設定ファイルの追加)
@@ -101,13 +103,14 @@ GitHub Actions は Microsoft が提供するサービスであり、高性能な
         - [12.15.3.2 重要なパーティションのバックアップ](#121532-重要なパーティションのバックアップ)
         - [12.15.3.3 特殊パーティション書き込みファイルの追加](#121533-特殊パーティション書き込みファイルの追加)
       - [12.15.4 フロー制御ファイルの追加](#12154-フロー制御ファイルの追加)
-    - [12.16 eMMC への書き込み時の I/O エラーの解決方法](#1216-emmc-への書き込み時の-io-エラーの解決方法)
+    - [12.16 DTBの周波数に起因するシステムの起動失敗やeMMC書き込み時のI/Oエラーを解決する方法](#1216-dtbの周波数に起因するシステムの起動失敗やemmc書き込み時のioエラーを解決する方法)
     - [12.17 Bullseye バージョンで音が出ない問題の解決方法](#1217-bullseye-バージョンで音が出ない問題の解決方法)
     - [12.18 boot.scr ファイルのコンパイル方法](#1218-bootscr-ファイルのコンパイル方法)
     - [12.19 リモートデスクトップの有効化とデフォルトポートの変更方法](#1219-リモートデスクトップの有効化とデフォルトポートの変更方法)
     - [12.20 TCP 輻輳制御の最適化方法](#1220-tcp-輻輳制御の最適化方法)
+    - [12.21 HDMI EDID 認識異常の解決方法](#1221-hdmi-edid-認識異常の解決方法)
 
-## 1. 自分の Github アカウントを登録する
+## 1. 自分の GitHub アカウントを登録する
 
 後続のシステムカスタマイズ操作を行うために、アカウントを登録してください。github.com ウェブサイトの右上にある `Sign up` ボタンをクリックし、案内に従って登録を完了してください。
 
@@ -188,7 +191,7 @@ schedule:
 
 ローカルコンパイル時は `-b` パラメータで指定し、GitHub Actions でのコンパイル時は `armbian_board` パラメータで指定します。`-b all` は `BUILD` が `yes` の全デバイスを構築することを意味します。`BOARD` パラメータを指定する場合、`BUILD` 値が `yes` でも `no` でも構築可能です。例：`-b r68s_s905x3-tx3_s905l3a-cm311`
 
-### 5.4 論理ボリュームを使用して Github Actions のコンパイル領域を拡張する
+### 5.4 論理ボリュームを使用して GitHub Actions のコンパイル領域を拡張する
 
 GitHub Actions のデフォルトコンパイル領域は 84G で、システムと必要なパッケージを除くと利用可能な領域は約 50G です。全ファームウェアのコンパイル時に容量不足が発生する場合があり、論理ボリュームを使用してコンパイル領域を約 110G に拡張できます。[.github/workflows/build-armbian-arm64-server-image.yml](../.github/workflows/build-armbian-arm64-server-image.yml) ファイルの方法を参照し、以下のコマンドで論理ボリュームを作成し、コンパイル時に論理ボリュームのパスを使用してください。
 
@@ -267,11 +270,11 @@ Armbian システムにログイン（デフォルトユーザー: root, デフ�
 armbian-install
 ```
 
-| オプションパラメータ  | デフォルト値   | 選択肢     | 説明                |
-| -------  | ------- | ------  | -----------------   |
-| -m       | no      | yes/no  | Mainline u-boot を使用 |
-| -a       | yes     | yes/no  | [ampart](https://github.com/7Ji/ampart) パーティションテーブル調整ツールを使用 |
-| -l       | no      | yes/no  | List. 全デバイスリストを表示 |
+| オプションパラメータ | デフォルト値 | 選択肢 | 説明 |
+| --- | --- | --- | --- |
+| -m | no | yes/no | Mainline u-boot を使用 |
+| -a | yes | yes/no | [ampart](https://github.com/7Ji/ampart) パーティションテーブル調整ツールを使用 |
+| -l | no | yes/no | 全デバイスリストを表示 |
 
 例: `armbian-install -m yes -a no`
 
@@ -384,7 +387,6 @@ RKDevTool フラッシュツールを開き、右クリックで項目を追加�
 - アドレス `0x00000000`、名前 `system`、パスはフラッシュする `Armbian.img` システムを選択します。
 - 実行をクリックし、プログレスバーが完了するまで待ちます。
 
-
 ### 8.3 Allwinner シリーズのインストール方法
 
 Armbian システムにログイン（デフォルトユーザー: root, デフォルトパスワード: 1234）→ コマンドを入力：
@@ -428,31 +430,31 @@ docker network create -d macvlan \
 
 #### 8.4.3 Armbian Docker コンテナの実行
 
-`armbian-trixie:arm64` イメージを例に、Armbian コンテナの実行方法を説明します。
+`armbian-resolute:arm64` イメージを例に、Armbian コンテナの実行方法を説明します。
 
 ```shell
 # バックグラウンドで Armbian コンテナを実行
 # コンテナ名、IPアドレス、イメージバージョンなどは実際の状況に合わせて変更してください
-docker run -itd --name=armbian-trixie \
+docker run -itd --name=armbian-resolute \
     --privileged \
     --network macvlan \
     --ip 10.1.1.15 \
-    --hostname=armbian-trixie \
+    --hostname=armbian-resolute \
     -e TZ=Asia/Shanghai \
     --restart unless-stopped \
-    ophub/armbian-trixie:arm64
+    ophub/armbian-resolute:arm64
 
 # Armbian コンテナのログを確認
-docker logs -f armbian-trixie
+docker logs -f armbian-resolute
 
 # Armbian コンテナに入る
-docker exec -it armbian-trixie bash
+docker exec -it armbian-resolute bash
 
 # Armbian コンテナから出る
 exit
 
 # Armbian コンテナを停止して削除
-docker rm -f armbian-trixie
+docker rm -f armbian-resolute
 ```
 
 ## 9. Armbian カーネルのコンパイル
@@ -500,26 +502,26 @@ Ubuntu、Debian、Armbian システムでのカーネルコンパイルをサポ
 
 ### 9.3 カスタムドライバモジュールのコンパイル方法
 
-Linux メインラインカーネルには一部のドライバがまだ内蔵されていないため、自分でドライバモジュールをコンパイルできます。メインラインカーネルをサポートするドライバを選択してください。Android ドライバは通常メインラインカーネルと互換性がなく、コンパイルできません。例は以下の通りです：
+Linux メインラインカーネルには一部のドライバがまだ内蔵されていないため、自分でドライバモジュールをコンパイルできます。メインラインカーネルをサポートするドライバを選択してください。Android ドライバは通常メインラインカーネルと互換性がなく、コンパイルできません。投稿 [rtl8189fs ドライバーモジュールのコンパイル方法⁠⁠](https://github.com/ophub/amlogic-s9xxx-armbian/issues/3193) を参照してください。
+
+例は以下の通りです：
 
 ```shell
 # ステップ1：最新カーネルに更新
 # 初期の header ファイルが不完全なため、最新のカーネルに更新する必要があります。
-# 各カーネルバージョンの要件：5.10.222, 5.15.163, 6.1.100, 6.6.41 以上
+# 各カーネルバージョンの要件：5.10.222, 5.15.163, 6.1.100, 6.6.41, 6.12, 6.18 以上
 armbian-sync
 armbian-update -k 6.1
-
 
 # ステップ2：コンパイルツールのインストール
 mkdir -p /usr/local/toolchain
 cd /usr/local/toolchain
 # コンパイルツールのダウンロード
-wget https://github.com/ophub/kernel/releases/download/dev/arm-gnu-toolchain-14.3.rel1-aarch64-aarch64-none-linux-gnu.tar.xz
+wget https://github.com/ophub/kernel/releases/download/toolchain/arm-gnu-toolchain-15.3.rel1-aarch64-aarch64-none-linux-gnu.tar.xz
 # 解凍
-tar -Jxf arm-gnu-toolchain-14.3.rel1-aarch64-aarch64-none-linux-gnu.tar.xz
+tar -Jxf arm-gnu-toolchain-15.3.rel1-aarch64-aarch64-none-linux-gnu.tar.xz
 # その他のコンパイル依存パッケージのインストール（オプション、エラーメッセージに応じて不足分を手動インストール可能）
 armbian-kernel -u
-
 
 # ステップ3：ドライバのダウンロードとコンパイル
 # ドライバソースコードのダウンロード
@@ -527,7 +529,7 @@ cd ~/
 git clone https://github.com/jwrdegoede/rtl8189ES_linux
 cd rtl8189ES_linux
 # コンパイル環境の設定
-gun_file="arm-gnu-toolchain-14.3.rel1-aarch64-aarch64-none-linux-gnu.tar.xz"
+gun_file="arm-gnu-toolchain-15.3.rel1-aarch64-aarch64-none-linux-gnu.tar.xz"
 toolchain_path="/usr/local/toolchain"
 toolchain_name="gcc"
 export CROSS_COMPILE="${toolchain_path}/${gun_file//.tar.xz/}/bin/aarch64-none-linux-gnu-"
@@ -539,7 +541,6 @@ export KSRC=/usr/lib/modules/$(uname -r)/build
 export M="/root/rtl8189ES_linux"
 # ドライバのコンパイル
 make
-
 
 # ステップ4：ドライバのインストール
 sudo cp -f 8189es.ko /lib/modules/$(uname -r)/kernel/drivers/net/wireless/
@@ -578,16 +579,16 @@ Armbian システムにログイン → コマンドを入力：
 armbian-update
 ```
 
-| オプションパラメータ  | デフォルト値        | 選択肢           | 説明                              |
-| -------- | ------------ | ------------- | -------------------------------- |
-| -r       | ophub/kernel | `<owner>/<repo>` | github.com からカーネルをダウンロードするリポジトリを設定  |
-| -u       | 自動        | stable/flippy/beta/rk3588/rk35xx | 使用するカーネルの [tags サフィックス](https://github.com/ophub/kernel/releases) を設定 |
-| -k       | 最新版        | カーネルバージョン       | [カーネルバージョン](https://github.com/ophub/kernel/releases/tag/kernel_stable) を設定  |
-| -b       | yes          | yes/no        | カーネル更新時に現在使用中のカーネルを自動バックアップ    |
-| -d       | deb          | tar/deb       | 優先使用するカーネルパッケージ形式を設定。指定形式が存在しない場合、スクリプトは自動的に別の形式を試行します。カスタムドライバをコンパイルする場合は `deb` 形式を推奨。 |
-| -m       | no           | yes/no        | メインライン u-boot を使用                    |
-| -s       | なし           | なし/ディスク名称     | [SOS] eMMC/NVMe/sdX などのディスク内のシステムカーネルを復旧 |
-| -h       | なし           | なし             | 使用方法のヘルプを表示                       |
+| オプションパラメータ | デフォルト値 | 選択肢 | 説明 |
+| --- | --- | --- | --- |
+| -r | ophub/kernel | `<owner>/<repo>` | github.com からカーネルをダウンロードするリポジトリを設定 |
+| -u | 自動 | stable/flippy/beta/rk3588/rk35xx | 使用するカーネルの [tags サフィックス](https://github.com/ophub/kernel/releases) を設定 |
+| -k | 最新版 | カーネルバージョン | [カーネルバージョン](https://github.com/ophub/kernel/releases/tag/kernel_stable) を設定 |
+| -b | yes | yes/no | カーネル更新時に現在使用中のカーネルを自動バックアップ |
+| -d | deb | tar/deb | 優先使用するカーネルパッケージ形式を設定。指定形式が存在しない場合、スクリプトは自動的に別の形式を試行します。カスタムドライバをコンパイルする場合は `deb` 形式を推奨。 |
+| -m | no | yes/no | メインライン u-boot を使用 |
+| -s | なし | なし/ディスク名称 | [SOS] eMMC/NVMe/sdX などのディスク内のシステムカーネルを復旧 |
+| -h | なし | なし | 使用方法のヘルプを表示 |
 
 例: `armbian-update -k 5.15 -u stable -d deb`
 
@@ -647,42 +648,45 @@ armbian-software
 ```shell
 armbian-apt
 
-[ STEPS ] Welcome to the Armbian source change script.
+[ STEPS ] Welcome to the APT Mirror Source Switching Tool.
 [ INFO ] Please select a [ bookworm ] mirror site.
-  ┌──────┬───────────────────┬────────────────────────────────┐
-  │  ID  │  Country/Region   │  Mirror Site                   │
-  ├──────┼───────────────────┼────────────────────────────────┤
-  │   0  │  -                │  Restore default source        │
-  │   1  │  China            │  mirrors.tuna.tsinghua.edu.cn  │
-  │   2  │  China            │  mirrors.bfsu.edu.cn           │
-  │   3  │  China            │  mirrors.aliyun.com            │
-  │   4  │  Hongkong, China  │  mirrors.xtom.hk               │
-  │   5  │  Taiwan, China    │  opensource.nchc.org.tw        │
-  ├──────┼───────────────────┼────────────────────────────────┤
-  │   6  │  United States    │  mirrors.ocf.berkeley.edu      │
-  │   7  │  United States    │  mirrors.xtom.com              │
-  │   8  │  United States    │  mirrors.mit.edu               │
-  │   9  │  Canada           │  mirror.csclub.uwaterloo.ca    │
-  │  10  │  Canada           │  muug.ca/mirror                │
-  ├──────┼───────────────────┼────────────────────────────────┤
-  │  11  │  Finland          │  mirror.kumi.systems           │
-  │  12  │  Netherlands      │  mirrors.xtom.nl               │
-  │  13  │  Germany          │  mirrors.xtom.de               │
-  │  14  │  Russia           │  mirror.yandex.ru              │
-  │  15  │  India            │  in.mirror.coganng.com         │
-  ├──────┼───────────────────┼────────────────────────────────┤
-  │  16  │  Estonia          │  mirrors.xtom.ee               │
-  │  17  │  Australia        │  mirrors.xtom.au               │
-  │  18  │  South Korea      │  mirror.yuki.net.uk            │
-  │  19  │  Singapore        │  mirror.sg.gs                  │
-  │  20  │  Japan            │  mirrors.xtom.jp               │
-  └──────┴───────────────────┴────────────────────────────────┘
+  ┌──────┬───────────────────┬─────────────────────────────────┐
+  │  ID  │  Country/Region   │  Mirror Site                    │
+  ├──────┼───────────────────┼─────────────────────────────────┤
+  │   0  │  -                │  Restore default source         │
+  ├──────┼───────────────────┼─────────────────────────────────┤
+  │   1  │  China            │  mirrors.tuna.tsinghua.edu.cn   │
+  │   2  │  China            │  mirrors.bfsu.edu.cn            │
+  │   3  │  China            │  mirrors.aliyun.com             │
+  │   4  │  China            │  mirrors.huaweicloud.com        │
+  │   5  │  Taiwan, China    │  mirror.twds.com.tw             │
+  ├──────┼───────────────────┼─────────────────────────────────┤
+  │   6  │  Russia           │  mirror.yandex.ru               │
+  │   7  │  South Korea      │  ftp.kaist.ac.kr                │
+  │   8  │  South Korea      │  ftp.lanet.kr,ftp.kaist.ac.kr   │
+  │   9  │  Singapore        │  mirror.sg.gs                   │
+  │  10  │  Australia        │  mirror.aarnet.edu.au           │
+  ├──────┼───────────────────┼─────────────────────────────────┤
+  │  11  │  United States    │  mirrors.ocf.berkeley.edu       │
+  │  12  │  United States    │  files.openstack.org/mirror     │
+  │  13  │  United States    │  steadfastnet.com,leaseweb.net  │
+  │  14  │  Canada           │  mirror.csclub.uwaterloo.ca     │
+  │  15  │  Canada           │  mirror.servercodes.com         │
+  ├──────┼───────────────────┼─────────────────────────────────┤
+  │  16  │  Denmark          │  ftp.openbsd.dk/mirrors         │
+  │  17  │  Denmark          │  mirrors.dotsrc.org             │
+  │  18  │  Germany          │  mirror.dogado.de               │
+  │  19  │  Germany          │  ftp.de.debian.org,ftp.fau.de   │
+  │  20  │  United Kingdom   │  mirror.yuki.net.uk             │
+  └──────┴───────────────────┴─────────────────────────────────┘
 [ OPTIONS ] Please Input ID: 1
-[ INFO ] Your selected source ID is: [ 1 ]
-[ STEPS ] Start to change the source of the system: [ mirrors.tuna.tsinghua.edu.cn ]
-[ INFO ] The system release is: [ bookworm ]
-[ SUCCESS ] Change the source of the system successfully.
+[ INFO ] Selected mirror source ID: [ 1 ]
+[ STEPS ] Changing APT mirror source to: [ mirrors.tuna.tsinghua.edu.cn ]
+[ INFO ] System release: [ bookworm ]
+[ SUCCESS ] APT mirror source changed successfully.
 ```
+
+ID `0` を選択するとバックアップファイルからデフォルトのソースを復元できます。`armbian-apt -h` でヘルプ情報を表示します。有効な ID が入力されるまでファイルは変更されないため、プロンプトをキャンセルしてもソース設定は変わりません。
 
 ## 12. よくある質問
 
@@ -1114,7 +1118,7 @@ net.ipv6.conf.lo.disable_ipv6 = 1
 
 #### 12.7.3 ワイヤレスの有効化方法
 
-一部のデバイスは無線ネットワークをサポートしています。有効化方法は以下の通りです：
+一部のデバイスは無線ネットワークに対応しています。無線APモードの利用方法については[説明](https://github.com/ophub/amlogic-s9xxx-armbian/issues/3610#issuecomment-5161303377)をご参照ください。DHCPサービスを併せて有効にする設定方法については[説明](https://github.com/ophub/amlogic-s9xxx-armbian/issues/3610#issuecomment-5162533992)をご参照ください。無線クライアントモードの利用方法については、以下の説明をご覧ください：
 
 ```shell
 # 管理ツールのインストール
@@ -1444,7 +1448,7 @@ git clone -b debian https://github.com/radxa/build.git
 # ~/rk3588-sdk/rkbin/：ビルド済みの Rockchip バイナリ（第1ステージローダーと ATF（Arm Trustzone ファームウェア）を含む）。
 # ~/rk3588-sdk/u-boot/：OS（Linux や Android など）を起動するための第2ステージブートローダー。
 
-# 03. u-boot のコンパイル（For ROCK 5B）
+# 03. u-boot のコンパイル (For ROCK 5B)
 cd ~/rk3588-sdk
 ./build/mk-uboot.sh rk3588-rock-5b
 
@@ -1467,7 +1471,6 @@ cm9vdA のオープンソースプロジェクト [cm9vdA/build-linux](https://g
 - DLFR100(rk3399) デバイスの u-boot コンパイル：[Link](https://github.com/ophub/amlogic-s9xxx-armbian/issues/1522#issuecomment-1622919423)
 - ZYSJ(rk3399) デバイスの u-boot コンパイル：[Link](https://github.com/ophub/amlogic-s9xxx-armbian/issues/1380#issuecomment-1539325464)
 
-
 ### 12.12 メモリサイズの誤認識
 
 メモリサイズが正しく認識されない場合（4G メモリが 1-2G として認識されるのは異常、3.7G として認識されるのは正常）、`/boot/UBOOT_OVERLOAD` ファイルを手動でコピーして試してみてください（注意：`コピー`であり`リネーム`ではありません。リネームするとインストールや更新操作時に起動できなくなります）：USB で使用する場合は `/boot/u-boot.ext` として保存、eMMC で使用する場合は `/boot/u-boot.emmc` として保存します。
@@ -1476,7 +1479,9 @@ cm9vdA のオープンソースプロジェクト [cm9vdA/build-linux](https://g
 
 ### 12.13 dtb ファイルの逆コンパイル方法
 
-一部の新しいデバイスは現在のサポートリストに含まれていない場合（またはハードウェアの違いがある場合）があり、dtb ファイルを逆コンパイルして関連パラメータを調整し、適合を試みることができます。
+#### 12.13.1 dtb ファイルを直接逆コンパイル
+
+既存の dtb ファイルを直接逆コンパイルし、関連パラメータを調整して適合させることができます。
 
 ```shell
 # 依存関係のインストール
@@ -1491,11 +1496,19 @@ dtc -I dts -O dtb -o xxx.dtb xxx.dts
 
 # 3. データを保存して再起動
 sync && reboot
-
-# 4. [任意アクション] 必要に応じてテスト
-# 例えば 12.16 で紹介した問題の解決時に、再インストールしてテスト
-armbian-install
 ```
+
+#### 12.13.2 実行中のデバイスから完全状態 DTS をエクスポート（推奨）
+
+特定のデバイスの適合および保守において、コンパイル済みのバイナリデバイスツリーファイル（.dtb）のみしか取得できず、対応するカーネルソースコード（.dts）が存在しない場合があります。その際は、正常に動作している Armbian システム上で以下のコマンドを実行し、カーネルランタイム環境から現在有効なデバイスツリーを直接逆コンパイルしてエクスポートすることをお勧めします：
+
+```shell
+dtc -I fs -O dts /sys/firmware/devicetree/base > my_runtime.dts
+```
+
+このコマンドはカーネルメモリから直接デバイスツリーデータを抽出するため、ディスク上の静的な .dtb ファイルを単に逆コンパイルするよりも正確で完全なテキストが得られます。ブートローダー（U-Boot など）やシステムファームウェアは、起動段階で実際のハードウェア検出結果に基づいてデバイスツリーを動的に修正または注入するからです（例：bootargs 起動パラメータのリアルタイム更新、特定ペリフェラルの status 状態の動的な切り替え、reg レジスタアドレスの調整など）。ディスク上の静的ファイルを直接逆コンパイルした場合、これらのランタイム変更を捕捉できません。
+
+この方法で取得されるのは、カーネルが最終的に適用した形態のランタイム（Runtime）デバイスツリーであり、システムの低レベルにおけるハードウェアの実際のトポロジーと動作状態を正確に反映しています。当該デバイスの .dts ソースコードを参照、修正、または再適合する際に、このファイルは極めて高い参考価値を持ち、競合のトラブルシューティングとペリフェラル設定の補完をより正確かつ効率的にします。
 
 ### 12.14 cmdline 設定の変更方法
 
@@ -1620,7 +1633,18 @@ hexdump -C reserved_first_8M.bin | less
 
 [yml ワークフロー制御ファイル](../.github/workflows/build-armbian-arm64-server-image.yml) の `armbian_board` に対応する `BOARD` オプションを追加し、GitHub Actions での使用をサポートさせます。
 
-### 12.16 eMMC への書き込み時の I/O エラーの解決方法
+### 12.16 DTBの周波数に起因するシステムの起動失敗やeMMC書き込み時のI/Oエラーを解決する方法
+
+DTBの周波数が高い場合、一部のデバイスが正常に起動できず、起動画面でフリーズしてしまうことがあります。例えば、[Issues](https://github.com/ophub/amlogic-s9xxx-armbian/issues/3678#issuecomment-5749939734) で報告されている事例のように、以下のようなエラーが出力されます。
+
+```shell
+Loading, please wait...
+Starting systemd-udevd version 259.5-0ubuntus.4
+Begin: Loading essential drivers ... done.
+Begin: Running /scripts/init-premount ... done.
+Begin: Mounting root file system... Begin: Running /scripts/local-top ... done.
+Begin: Running /scripts/local-premount ... Scanning for Btrfs filesystems
+```
 
 一部のデバイスは USB/SD/TF から Armbian を正常に起動できますが、eMMC に書き込む際に I/O 書き込みエラーが発生します。例えば [Issues](https://github.com/ophub/amlogic-s9xxx-armbian/issues/989) のケースでは、以下のようなエラーが報告されています：
 
@@ -1748,3 +1772,47 @@ net.ipv4.tcp_congestion_control = bbr
 # net.core.default_qdisc = fq_codel
 # net.ipv4.tcp_congestion_control = cubic
 ```
+
+### 12.21 HDMI EDID 認識異常の解決方法
+
+**利用シーン**：一部のデバイスでは、HDMI ポートがモニターから EDID を読み取れません（モニターの EDID チップが DDC バス上で応答しない、基板レベルのハードウェア共通の問題）。カーネルがモニターの能力リストを取得できず、映像が全く出力されないか、1024x768 のフォールバック解像度でしか出力されない状態になります（代表的な例は bdy-g98。詳細は [ophub/fnnas#606](https://github.com/ophub/fnnas/issues/606#issuecomment-5282389038) を参照）。同様に、KVM スイッチや HDMI 変換/キャプチャデバイスを使用する場合にも EDID が失われたり異常になったりすることがあります。また、モニターなし（headless）の環境で、システムに常に固定解像度で出力させたい場合もあります。これらはすべて、カーネルパラメータで EDID ファームウェアを強制的に注入し、モニターからの読み取りを回避することで解決できます。
+
+**仕組み**：システムイメージには initramfs フックが内蔵されており、initramfs が生成/再構築されるたびに、`/lib/firmware/edid/` ディレクトリ内のすべての EDID ファームウェアファイル（よく使われる解像度を約30個プリセット）が自動的に同梱されます。この仕組みはデフォルトでは待機状態です——カーネルパラメータを追加しない限り、同梱されたファイルは一切影響しません。
+
+**追加方法**：`/boot/armbianEnv.txt` を編集し、`extraargs=` の行末に追記します（6.x カーネルの例）：
+
+```shell
+extraargs=video=HDMI-A-1:e drm.edid_firmware=HDMI-A-1:edid/1920x1080.bin
+```
+
+`video=HDMI-A-1:e` はそのインターフェースを強制的に有効化するためのもの（任意）、`drm.edid_firmware=` は強制的に使用する EDID ファイルを指定します（パスは `/lib/firmware/` からの相対パス）。よくある3つの落とし穴：
+
+- 設定ファイルは `/boot/armbianEnv.txt`、`/boot/uEnv.txt`、`/boot/extlinux/extlinux.conf` などの場合があります。実際の状況に応じて変更してください。
+- **パラメータのプレフィックスはカーネルバージョンによって異なります**：6.x カーネルは `drm.edid_firmware`、それ以前のカーネルは `drm_kms_helper.edid_firmware` を使用します。不明な場合はデバイス上で確認してください：`/sys/module/drm/parameters/edid_firmware` が存在すれば `drm.` プレフィックスを使用し、なければ `/sys/module/drm_kms_helper/parameters/` 配下の同名ファイルを確認します。プレフィックスを間違えるとカーネルは黙って無視し、エラーも出ず効果もありません。
+- インターフェース名は `HDMI-A-1` とは限りません。`ls /sys/class/drm/ | grep HDMI` でデバイス上の実際の名前を確認できます。
+
+保存後、initramfs を再構築して再起動します：
+
+```shell
+# "update-initramfs: Not updating initramfs." と表示された場合は、先に次を実行：
+sed -i 's/^update_initramfs=.*/update_initramfs=yes/' /etc/initramfs-tools/update-initramfs.conf
+
+update-initramfs -u -k $(uname -r)
+reboot
+```
+
+**確認方法**：
+
+```shell
+lsinitramfs /boot/initrd.img-$(uname -r) | grep edid   # initramfs 内に edid ファイルが見えるはず
+dmesg | grep -i edid                                   # ファームウェアがカーネルに読み込まれたことを確認
+cat /sys/class/drm/card0-HDMI-A-1/modes                # 目的の解像度が表示されれば有効
+```
+
+**解像度の変更**：`ls /lib/firmware/edid/` で一覧表示されるプリセットファイルから別のもの（例：`1920x1080_50hz.bin`）を選び、カーネルパラメータを新しいファイル名に向け、上記の `update-initramfs` コマンドを再実行して再起動するだけです。自作の EDID ファイル（128 バイトのベースブロック、または拡張ブロック付きのマルチブロックファイル）を配置することもでき、手順は同じです。
+
+**注意事項**：
+
+- プリセットの EDID には CTA 拡張ブロックが含まれていないため、**HDMI オーディオは使用できません**。オーディオが必要な場合は、拡張ブロック付きの EDID ファイルを使用してください。
+- カーネルで `CONFIG_DRM_LOAD_EDID_FIRMWARE=y` が有効になっている必要があります（本リポジトリでコンパイルされたカーネルでは有効済み）。
+- モニターの自動認識に戻したい場合：`extraargs` からこの2つのパラメータを削除して再起動するだけで、他の操作は不要です。

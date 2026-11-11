@@ -36,17 +36,19 @@ on:
           - range100_150
           - last50
           - a311d-oes_s922x-oes-plus_wxy-oect
-          - nsy-g16-plus_nsy-g68-plus_bdy-g18-pro
+          - nsy-g16-plus_nsy-g68-plus_bdy-g18-pro_bdy-g98
           - s905d_s905x3_s912_s922x-ct2000
           - a311d
           - a311d-oes
           - alark35-3500
           - anas3035
+          - ai3399-c
           - aio-3399b
           - aio-3399c
           - aio-3399c-ai
           - bdkj-bd-one
           - bdy-g18-pro
+          - bdy-g98
           - beikeyun
           - boca-tcn100
           - boca-tcn200
@@ -66,6 +68,7 @@ on:
           - eaidk-610
           - easepi-a2
           - easepi-r2
+          - elfboard-elf2
           - emb3531
           - fine3399
           - firefly-itx-3588j
@@ -76,6 +79,8 @@ on:
           - gea-6319
           - gzpeite-p01
           - h28k
+          - h339pc
+          - h618-ai-douhe
           - h618-devboard
           - h66k
           - h68k
@@ -84,12 +89,14 @@ on:
           - h88k-v3
           - h96-max-m2
           - hk1-rbox-k8s
+          - houzzkit-f1
           - hs530r
           - ht2
           - hugsun-x99
           - indiedroid-nova
           - ipc-r
           - jp-tvbox
+          - kickpi-k11c-v12
           - king3399
           - kylin3399
           - lckfb-tspi
@@ -97,35 +104,45 @@ on:
           - leez
           - lubancat-1
           - lubancat-2
+          - lubancat-3
           - lubancat-4
+          - lubancat-5
           - lx-r3s
           - lyt-t68m
           - lz-d3568
           - lz-d3588
           - lz-k3568
+          - lzk4
           - md1000
           - mrkaio-m68s
+          - mytv-net1
           - nanopc-t4
           - nanopc-t6
           - nanopi-m5
           - nanopi-r5c
           - nanopi-r5s
+          - nanopi-som
           - nsy-g16-plus
           - nsy-g68-plus
           - orangepi-3b
           - orangepi-5-plus
           - orangepi-5-pro
+          - orangepi-5-ultra
           - orangepi-5b
           - orangepi-zero3
           - painet-p3
+          - painet-p5
           - panther-x2
           - photonicat
+          - quarkpi-ca2
           - r66s
           - r68s
+          - recomputer-rk3576-devkit
           - renegade-rk3328
           - rk3318-box
           - roceos-k40pro
           - rock-5-itx
+          - rock-3a
           - rock-3b
           - rock-3c
           - rock5b
@@ -157,6 +174,7 @@ on:
           - s905l3b-e900v22d
           - s905l3b-e900v22e
           - s905l3b-ip103h
+          - s905l3b-m302a
           - s905l3b-rg020et-ca
           - s905l3b-unt403a
           - s905lb-ipbs9505
@@ -174,9 +192,11 @@ on:
           - s905x-tbee
           - s905x-tx9
           - s905x2
+          - s905x2-b860h-v5
           - s905x2-km3
           - s905x2-x96max-2g
           - s905x2-hg680fj
+          - s905x2-w103d
           - s905x3
           - s905x3-2101
           - s905x3-a100
@@ -194,6 +214,7 @@ on:
           - s905x3-ugoosx3
           - s905x3-whale
           - s905x3-x88-pro-x3
+          - s905x3-yzd-s18
           - s905x3-x96air
           - s905x3-x96air-gb
           - s905x3-x96max
@@ -229,11 +250,14 @@ on:
           - sv-33a6x-vpu
           - swan1-w28
           - sw799
+          - sz3390
           - taram
           - tanix-tx6
           - tb-ls3399
           - tn3399
+          - torder-r10d
           - tpm312
+          - tps781
           - tqc-a01
           - tvi3315a
           - vontar-h618
@@ -241,12 +265,20 @@ on:
           - wocyber-a3
           - wxy-oect
           - wxy-oect-mod
+          - x88pro13
           - x88pro20
           - x98h
+          - x98h-100mb
           - xiaobao
+          - xingyicloud
+          - youyeetoo-r1-v3
+          - youyeetoo-yy3568
+          - youyeetoo-yy3588
           - yskj
+          - z93a
           - zcube1-max
           - zk-r39a
+          - ztl-a568
           - zysj
       armbian_kernel:
         description: "Select kernel version."
@@ -317,7 +349,7 @@ env:
 
 jobs:
   setup:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04-arm
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
@@ -333,7 +365,7 @@ jobs:
 
   build:
     needs: setup
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04-arm
     if: ${{ github.event.repository.owner.id == github.event.sender.id }}
     permissions:
       contents: write
@@ -358,18 +390,18 @@ jobs:
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android 2>/dev/null
           sudo swapoff -a
           sudo rm -f /swapfile /mnt/swapfile
-          sudo -E apt-get -y update
-          sudo -E apt-get -y purge azure-cli ghc* zulu* llvm* firefox google* dotnet* powershell openjdk* mongodb* moby* || true
-          sudo -E apt-get -y install $(curl -fsSL https://ophub.org/ubuntu2404-build-armbian-depends)
-          sudo -E systemctl daemon-reload
-          #sudo -E apt-get -y full-upgrade
-          sudo -E apt-get -y autoremove --purge
-          sudo -E apt-get clean
+          sudo apt-get -y update
+          sudo apt-get -y purge azure-cli ghc* zulu* llvm* firefox google* dotnet* powershell openjdk* mongodb* moby* || true
+          sudo apt-get -y install $(curl -fsSL https://ophub.org/ubuntu2604-build-armbian-depends)
+          sudo systemctl daemon-reload
+          #sudo apt-get -y full-upgrade
+          sudo apt-get -y autoremove --purge
+          sudo apt-get clean
           sudo sed -i '/NVM_DIR/d;/skel/d' /root/{.bashrc,.profile}
           sudo rm -rf ~/{.cargo,.dotnet,.rustup}
-          sudo -E timedatectl set-timezone "${TZ:-Etc/UTC}"
-          sudo -E ntpdate ntp.ubuntu.com 0.pool.ntp.org || true
-          sudo -E timedatectl set-ntp true
+          sudo timedatectl set-timezone "${TZ:-Etc/UTC}"
+          sudo ntpdate ntp.ubuntu.com 0.pool.ntp.org || true
+          sudo timedatectl set-ntp true
           date -u
           timedatectl status || true
           echo "status=success" >> ${GITHUB_OUTPUT}

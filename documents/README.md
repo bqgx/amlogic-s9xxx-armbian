@@ -8,7 +8,7 @@ GitHub Actions is a CI/CD service from Microsoft that provides high-performance 
 
 - [Armbian Build and Usage Guide](#armbian-build-and-usage-guide)
 - [Table of Contents](#table-of-contents)
-  - [1. Register your own Github account](#1-register-your-own-github-account)
+  - [1. Register your own GitHub account](#1-register-your-own-github-account)
   - [2. Set up private variable GITHUB\_TOKEN etc](#2-set-up-private-variable-github_token-etc)
   - [3. Fork the repository and set Workflow permissions](#3-fork-the-repository-and-set-workflow-permissions)
   - [4. Customization instructions for personalized Armbian system files](#4-customization-instructions-for-personalized-armbian-system-files)
@@ -16,7 +16,7 @@ GitHub Actions is a CI/CD service from Microsoft that provides high-performance 
     - [5.1 Manual Compilation](#51-manual-compilation)
     - [5.2 Scheduled Compilation](#52-scheduled-compilation)
     - [5.3 Customizing Default System Configuration](#53-customizing-default-system-configuration)
-    - [5.4 Expanding Github Actions Compilation Space Using Logical Volumes](#54-expanding-github-actions-compilation-space-using-logical-volumes)
+    - [5.4 Expanding GitHub Actions Compilation Space Using Logical Volumes](#54-expanding-github-actions-compilation-space-using-logical-volumes)
     - [5.5 Build Armbian Docker image](#55-build-armbian-docker-image)
   - [6. Saving the System](#6-saving-the-system)
   - [7. Downloading the System](#7-downloading-the-system)
@@ -92,6 +92,8 @@ GitHub Actions is a CI/CD service from Microsoft that provides high-performance 
         - [12.11.2.2 How to use cm9vdA's u-boot building script](#121122-how-to-use-cm9vdas-u-boot-building-script)
     - [12.12 Error in Memory Size Recognition](#1212-error-in-memory-size-recognition)
     - [12.13 How to Decompile dtb Files](#1213-how-to-decompile-dtb-files)
+      - [12.13.1 Directly Decompile dtb Files](#12131-directly-decompile-dtb-files)
+      - [12.13.2 Export Full-State DTS from a Running Device (Recommended)](#12132-export-full-state-dts-from-a-running-device-recommended)
     - [12.14 How to Modify cmdline Settings](#1214-how-to-modify-cmdline-settings)
     - [12.15 How to Add New Supported Devices](#1215-how-to-add-new-supported-devices)
       - [12.15.1 Add Device Configuration File](#12151-add-device-configuration-file)
@@ -101,19 +103,20 @@ GitHub Actions is a CI/CD service from Microsoft that provides high-performance 
         - [12.15.3.2 Back Up Key Partitions](#121532-back-up-key-partitions)
         - [12.15.3.3 Add a Special Partition Writing File](#121533-add-a-special-partition-writing-file)
       - [12.15.4 Add Process Control Files](#12154-add-process-control-files)
-    - [12.16 How to Resolve the Issue of I/O Errors While Writing to eMMC](#1216-how-to-resolve-the-issue-of-io-errors-while-writing-to-emmc)
+    - [12.16 How to Resolve System Boot Failures or eMMC Write I/O Errors Caused by DTB Frequency](#1216-how-to-resolve-system-boot-failures-or-emmc-write-io-errors-caused-by-dtb-frequency)
     - [12.17 How to Solve the Issue of No Sound in the Bullseye Version](#1217-how-to-solve-the-issue-of-no-sound-in-the-bullseye-version)
     - [12.18 How to build the boot.scr file](#1218-how-to-build-the-bootscr-file)
     - [12.19 How to Enable Remote Desktop and Modify the Default Port](#1219-how-to-enable-remote-desktop-and-modify-the-default-port)
     - [12.20 TCP Congestion Control Optimization Guide](#1220-tcp-congestion-control-optimization-guide)
+    - [12.21 How to Fix HDMI EDID Detection Problems](#1221-how-to-fix-hdmi-edid-detection-problems)
 
-## 1. Register your own Github account
+## 1. Register your own GitHub account
 
 Register an account to proceed with system customization. Click the `Sign up` button in the upper right corner of github.com and follow the prompts to complete registration.
 
 ## 2. Set up private variable GITHUB_TOKEN etc
 
-According to the [GitHub Docs](https://docs.github.com/en/actions/security-guides/automatic-token-authentication), GitHub automatically creates a unique `GITHUB_TOKEN` secret at the start of every workflow job for use within the workflow. The `{{ secrets.GITHUB_TOKEN }}` can be used for authentication within the workflow job.
+According to the [GitHub Docs](https://docs.github.com/en/actions/security-guides/automatic-token-authentication), GitHub automatically creates a unique `GITHUB_TOKEN` secret at the start of every workflow job for use within the workflow. The `${{ secrets.GITHUB_TOKEN }}` can be used for authentication within the workflow job.
 
 When building an [Armbian Docker](../.github/workflows/build-armbian-arm64-docker-image.yml) image in Actions and pushing it to Docker Hub, you need to set two secrets: `DOCKERHUB_USERNAME` and `DOCKERHUB_PASSWORD`. On your repository's page, click Settings in the top right corner, then navigate to `Settings` > `Secrets and variables` > `Actions` > `Repository secrets` > `New repository secret`, add the following two secrets:
 
@@ -163,7 +166,7 @@ The system can be compiled manually, on a schedule, or triggered by specific eve
 
 ### 5.1 Manual Compilation
 
-In your repository's navigation bar, click the Actions button, then select Build armbian > Run workflow > Run workflow to start compilation. The process takes approximately 3 hours and is complete once all steps finish. The illustration is as follows:
+In your repository's navigation bar, click the Actions button, then select Build Armbian > Run workflow > Run workflow to start compilation. The process takes approximately 3 hours and is complete once all steps finish. The illustration is as follows:
 
 <div style="width:100%;margin-top:40px;margin:5px;">
 <img src=https://user-images.githubusercontent.com/68696949/163203938-e7762b09-e6b8-4cf5-b1f1-9c67c1a29953.png width="300" />
@@ -188,9 +191,9 @@ Devices with `BUILD` set to `yes` are included in the default build and can be u
 
 For local compilation, use the `-b` parameter; for GitHub Actions, use the `armbian_board` parameter. `-b all` packages all devices with `BUILD` set to `yes`. Specifying a `BOARD` explicitly will package it regardless of its `BUILD` value. For example: `-b r68s_s905x3-tx3_s905l3a-cm311`.
 
-### 5.4 Expanding Github Actions Compilation Space Using Logical Volumes
+### 5.4 Expanding GitHub Actions Compilation Space Using Logical Volumes
 
-GitHub Actions provides 84GB of compile space by default, with approximately 50GB available after accounting for the system and required packages. When compiling all firmware, this may be insufficient. Use logical volumes to expand the compile space to approximately 110GB. Refer to the [.github/workflows/build-armbian-arm64-server-image.yml](../.github/workflows/build-armbian-arm64-server-image.yml) file and use the commands below to create a logical volume. Then use the logical volume path during compilation.
+GitHub Actions provides 84GB of compile space by default, with approximately 50GB available after accounting for the system and required packages. When compiling all firmware images, this may be insufficient. You can use logical volumes to expand the compile space to approximately 110GB. Refer to the [.github/workflows/build-armbian-arm64-server-image.yml](../.github/workflows/build-armbian-arm64-server-image.yml) file and use the commands below to create a logical volume, then use the logical volume path during compilation.
 
 ```yaml
 - name: Create simulated physical disk
@@ -267,11 +270,11 @@ Log in to the Armbian system (default user: root, default password: 1234) → En
 armbian-install
 ```
 
-| Optional Parameter | Default Value | Options | Description                          |
-| ------------------ | ------------- | ------- | ------------------------------------ |
-| -m                 | no            | yes/no  | Use Mainline u-boot                  |
-| -a                 | yes           | yes/no  | Use [ampart](https://github.com/7Ji/ampart) partition table adjustment tool |
-| -l                 | no            | yes/no  | List. Display the entire device list |
+| Optional Parameter | Default Value | Options | Description |
+| --- | --- | --- | --- |
+| -m | no | yes/no | Use mainline u-boot |
+| -a | yes | yes/no | Use [ampart](https://github.com/7Ji/ampart) partition adjustment tool |
+| -l | no | yes/no | Display the entire device list |
 
 Example: `armbian-install -m yes -a no`
 
@@ -384,7 +387,6 @@ This method is based on [cc747](https://post.smzdm.com/p/a4wkdo7l/)'s tutorial. 
 - Address `0x00000000`, name `system`, path select the `Armbian.img` system to be flashed.
 - Click Execute and wait for the progress to complete.
 
-
 ### 8.3 Allwinner Series Installation Method
 
 Log in to the Armbian system (default user: root, default password: 1234) → Enter the command:
@@ -428,31 +430,31 @@ docker network create -d macvlan \
 
 #### 8.4.3 Run Armbian Docker Container
 
-Here, the `armbian-trixie:arm64` image is used as an example to demonstrate how to run an Armbian container.
+Here, the `armbian-resolute:arm64` image is used as an example to demonstrate how to run an Armbian container.
 
 ```shell
 # Run the Armbian container in detached mode
 # Modify the container name, IP address, image version, etc., according to your actual situation
-docker run -itd --name=armbian-trixie \
+docker run -itd --name=armbian-resolute \
     --privileged \
     --network macvlan \
     --ip 10.1.1.15 \
-    --hostname=armbian-trixie \
+    --hostname=armbian-resolute \
     -e TZ=Asia/Shanghai \
     --restart unless-stopped \
-    ophub/armbian-trixie:arm64
+    ophub/armbian-resolute:arm64
 
 # View Armbian container logs
-docker logs -f armbian-trixie
+docker logs -f armbian-resolute
 
 # Enter the Armbian container
-docker exec -it armbian-trixie bash
+docker exec -it armbian-resolute bash
 
 # Exit the Armbian container
 exit
 
 # Stop and remove the Armbian container
-docker rm -f armbian-trixie
+docker rm -f armbian-resolute
 ```
 
 ## 9. Compiling Armbian Kernel
@@ -469,7 +471,7 @@ When the kernel patch directory [tools/patch](../../compile-kernel/tools/patch) 
         └── tools
             └── patch
                 ├── common-kernel-patches  # Fixed directory name: stores common kernel patches for all versions
-                ├── linux-5.15.y           # Named after the kernel source library: stores dedicated patches
+                ├── linux-5.15.y           # Named after the kernel source repository: stores dedicated patches
                 ├── linux-6.1.y
                 ├── linux-5.10.y-rk35xx
                 └── more kernel directory...
@@ -498,29 +500,28 @@ When specifying a custom kernel patch via `kernel_patch`, follow the naming conv
 
 Before adding a custom kernel patch, compare it against the upstream kernel source repository [unifreq/linux-k.x.y](https://github.com/unifreq) to verify it has not already been applied and to avoid conflicts. Tested kernel patches are encouraged to be submitted to the kernel repositories maintained by unifreq. Your contributions help make Armbian and OpenWrt more stable and functional for everyone.
 
-
 ### 9.3 How to Customize Compilation of Driver Modules
 
-Some drivers are not yet included in the mainline Linux kernel but can be compiled as custom modules. Only drivers compatible with the mainline kernel can be compiled; Android-specific drivers are generally unsupported. For example:
+Some drivers are not yet included in the mainline Linux kernel but can be compiled as custom modules. Only drivers compatible with the mainline kernel can be compiled; Android-specific drivers are generally unsupported. See the guide: [How to Compile the rtl8189fs Driver Module⁠](https://github.com/ophub/amlogic-s9xxx-armbian/issues/3193)
+
+For example:
 
 ```shell
 # Step 1: Update to the latest kernel
 # Due to incomplete header files in earlier versions, it is necessary to update to the latest kernel version.
-# The requirement for each kernel version is not lower than 5.10.222, 5.15.163, 6.1.100, 6.6.41.
+# The requirement for each kernel version is not lower than 5.10.222, 5.15.163, 6.1.100, 6.6.41, 6.12, 6.18.
 armbian-sync
 armbian-update -k 6.1
-
 
 # Step 2: Install compilation tools
 mkdir -p /usr/local/toolchain
 cd /usr/local/toolchain
 # Download the compilation tools
-wget https://github.com/ophub/kernel/releases/download/dev/arm-gnu-toolchain-14.3.rel1-aarch64-aarch64-none-linux-gnu.tar.xz
+wget https://github.com/ophub/kernel/releases/download/toolchain/arm-gnu-toolchain-15.3.rel1-aarch64-aarch64-none-linux-gnu.tar.xz
 # Extract
-tar -Jxf arm-gnu-toolchain-14.3.rel1-aarch64-aarch64-none-linux-gnu.tar.xz
+tar -Jxf arm-gnu-toolchain-15.3.rel1-aarch64-aarch64-none-linux-gnu.tar.xz
 # Install additional compilation dependencies (optional; you can manually install missing components based on errors).
 armbian-kernel -u
-
 
 # Step 3: Download and compile the driver
 # Download driver source code
@@ -528,7 +529,7 @@ cd ~/
 git clone https://github.com/jwrdegoede/rtl8189ES_linux
 cd rtl8189ES_linux
 # Set up the compilation environment
-gun_file="arm-gnu-toolchain-14.3.rel1-aarch64-aarch64-none-linux-gnu.tar.xz"
+gun_file="arm-gnu-toolchain-15.3.rel1-aarch64-aarch64-none-linux-gnu.tar.xz"
 toolchain_path="/usr/local/toolchain"
 toolchain_name="gcc"
 export CROSS_COMPILE="${toolchain_path}/${gun_file//.tar.xz/}/bin/aarch64-none-linux-gnu-"
@@ -540,7 +541,6 @@ export KSRC=/usr/lib/modules/$(uname -r)/build
 export M="/root/rtl8189ES_linux"
 # Compile the driver
 make
-
 
 # Step 4: Install the driver
 sudo cp -f 8189es.ko /lib/modules/$(uname -r)/kernel/drivers/net/wireless/
@@ -580,15 +580,15 @@ armbian-update
 ```
 
 | Optional Parameters | Default Value | Options | Description |
-| -------- | ------------ | ------------- | -------------------------------- |
-| -r | ophub/kernel | `<owner>/<repo>` | Set the repository to download the kernel from github.com |
-| -u | Automatic | stable/flippy/beta/rk3588/rk35xx | Set the suffix of the used kernel's [tags](https://github.com/ophub/kernel/releases) |
-| -k | Latest Version | Kernel Version | Set the [Kernel Version](https://github.com/ophub/kernel/releases/tag/kernel_stable) |
-| -b | yes | yes/no | Automatically backup the kernel currently in use when updating the kernel |
-| -d | deb | tar/deb | Set the preferred kernel package format. If unavailable, the script will automatically try the alternative. `deb` is recommended for compiling custom drivers. |
-| -m | no | yes/no | Use the mainline u-boot |
-| -s | None | None/DiskName | [SOS] Restore the system kernel in eMMC/NVMe/sdX and other disks |
-| -h | None | None | View the usage help |
+| --- | --- | --- | --- |
+| -r | ophub/kernel | `<owner>/<repo>` | Set the repository on github.com for downloading the kernel |
+| -u | Automatic | stable/flippy/beta/rk3588/rk35xx | Set the [tags suffix](https://github.com/ophub/kernel/releases) of the kernel used |
+| -k | Latest Version | Kernel Version | Set the [kernel version](https://github.com/ophub/kernel/releases/tag/kernel_stable) |
+| -b | yes | yes/no | Automatically back up the currently used kernel when updating |
+| -d | deb | tar/deb | Set the preferred kernel package format. If unavailable, the script will automatically try the alternative format. The `deb` format is recommended for compiling custom drivers. |
+| -m | no | yes/no | Use mainline u-boot |
+| -s | none | none/DiskName | [SOS] Restore the system kernel on eMMC/NVMe/sdX or other disks |
+| -h | none | none | View help information |
 
 Example: `armbian-update -k 5.15 -u stable -d deb`
 
@@ -645,46 +645,48 @@ Use `armbian-software -u` to update the local software center list. Based on com
 
 Use `armbian-apt` to select an appropriate software mirror for your region, improving download speeds. For example, select the `mirrors.tuna.tsinghua.edu.cn` source in China:
 
-
 ```shell
 armbian-apt
 
-[ STEPS ] Welcome to the Armbian source change script.
+[ STEPS ] Welcome to the APT Mirror Source Switching Tool.
 [ INFO ] Please select a [ bookworm ] mirror site.
-  ┌──────┬───────────────────┬────────────────────────────────┐
-  │  ID  │  Country/Region   │  Mirror Site                   │
-  ├──────┼───────────────────┼────────────────────────────────┤
-  │   0  │  -                │  Restore default source        │
-  │   1  │  China            │  mirrors.tuna.tsinghua.edu.cn  │
-  │   2  │  China            │  mirrors.bfsu.edu.cn           │
-  │   3  │  China            │  mirrors.aliyun.com            │
-  │   4  │  Hongkong, China  │  mirrors.xtom.hk               │
-  │   5  │  Taiwan, China    │  opensource.nchc.org.tw        │
-  ├──────┼───────────────────┼────────────────────────────────┤
-  │   6  │  United States    │  mirrors.ocf.berkeley.edu      │
-  │   7  │  United States    │  mirrors.xtom.com              │
-  │   8  │  United States    │  mirrors.mit.edu               │
-  │   9  │  Canada           │  mirror.csclub.uwaterloo.ca    │
-  │  10  │  Canada           │  muug.ca/mirror                │
-  ├──────┼───────────────────┼────────────────────────────────┤
-  │  11  │  Finland          │  mirror.kumi.systems           │
-  │  12  │  Netherlands      │  mirrors.xtom.nl               │
-  │  13  │  Germany          │  mirrors.xtom.de               │
-  │  14  │  Russia           │  mirror.yandex.ru              │
-  │  15  │  India            │  in.mirror.coganng.com         │
-  ├──────┼───────────────────┼────────────────────────────────┤
-  │  16  │  Estonia          │  mirrors.xtom.ee               │
-  │  17  │  Australia        │  mirrors.xtom.au               │
-  │  18  │  South Korea      │  mirror.yuki.net.uk            │
-  │  19  │  Singapore        │  mirror.sg.gs                  │
-  │  20  │  Japan            │  mirrors.xtom.jp               │
-  └──────┴───────────────────┴────────────────────────────────┘
+  ┌──────┬───────────────────┬─────────────────────────────────┐
+  │  ID  │  Country/Region   │  Mirror Site                    │
+  ├──────┼───────────────────┼─────────────────────────────────┤
+  │   0  │  -                │  Restore default source         │
+  ├──────┼───────────────────┼─────────────────────────────────┤
+  │   1  │  China            │  mirrors.tuna.tsinghua.edu.cn   │
+  │   2  │  China            │  mirrors.bfsu.edu.cn            │
+  │   3  │  China            │  mirrors.aliyun.com             │
+  │   4  │  China            │  mirrors.huaweicloud.com        │
+  │   5  │  Taiwan, China    │  mirror.twds.com.tw             │
+  ├──────┼───────────────────┼─────────────────────────────────┤
+  │   6  │  Russia           │  mirror.yandex.ru               │
+  │   7  │  South Korea      │  ftp.kaist.ac.kr                │
+  │   8  │  South Korea      │  ftp.lanet.kr,ftp.kaist.ac.kr   │
+  │   9  │  Singapore        │  mirror.sg.gs                   │
+  │  10  │  Australia        │  mirror.aarnet.edu.au           │
+  ├──────┼───────────────────┼─────────────────────────────────┤
+  │  11  │  United States    │  mirrors.ocf.berkeley.edu       │
+  │  12  │  United States    │  files.openstack.org/mirror     │
+  │  13  │  United States    │  steadfastnet.com,leaseweb.net  │
+  │  14  │  Canada           │  mirror.csclub.uwaterloo.ca     │
+  │  15  │  Canada           │  mirror.servercodes.com         │
+  ├──────┼───────────────────┼─────────────────────────────────┤
+  │  16  │  Denmark          │  ftp.openbsd.dk/mirrors         │
+  │  17  │  Denmark          │  mirrors.dotsrc.org             │
+  │  18  │  Germany          │  mirror.dogado.de               │
+  │  19  │  Germany          │  ftp.de.debian.org,ftp.fau.de   │
+  │  20  │  United Kingdom   │  mirror.yuki.net.uk             │
+  └──────┴───────────────────┴─────────────────────────────────┘
 [ OPTIONS ] Please Input ID: 1
-[ INFO ] Your selected source ID is: [ 1 ]
-[ STEPS ] Start to change the source of the system: [ mirrors.tuna.tsinghua.edu.cn ]
-[ INFO ] The system release is: [ bookworm ]
-[ SUCCESS ] Change the source of the system successfully.
+[ INFO ] Selected mirror source ID: [ 1 ]
+[ STEPS ] Changing APT mirror source to: [ mirrors.tuna.tsinghua.edu.cn ]
+[ INFO ] System release: [ bookworm ]
+[ SUCCESS ] APT mirror source changed successfully.
 ```
+
+Selecting ID `0` restores the default sources from the backup files, and `armbian-apt -h` displays the help information. No file is modified until a valid ID is entered, so cancelling the prompt leaves the sources unchanged.
 
 ## 12. Frequently Asked Questions
 
@@ -707,7 +709,6 @@ Alternatively, flash the Android system to eMMC via USB cable. Android system im
 #### 12.3.1 Backup and Restore Using Armbian-ddbr
 
 Before installing Armbian on a new device, back up the original Android TV system in case restoration is needed later. Boot Armbian from `TF/SD/USB`, run `armbian-ddbr`, and enter `b` when prompted to create a backup. The backup is saved to `/ddbr/BACKUP-arm-64-emmc.img.gz` — download and keep it in a safe location. To restore, upload the backup file to the same path on the `TF/SD/USB` device, run `armbian-ddbr`, and enter `r` when prompted.
-
 
 #### 12.3.2 Recovering using Amlogic Flashing Tool
 
@@ -772,7 +773,7 @@ to `/etc/modprobe.d/blacklist.conf` and restart.
 
 ### 12.7 Network Configuration
 
-#### 12.7.1 Network Configuration Using Interfaces 
+#### 12.7.1 Network Configuration Using Interfaces
 
 The default content of the network configuration file `/etc/network/interfaces` is as follows:
 
@@ -809,7 +810,7 @@ gateway 192.168.1.1
 dns-nameservers 192.168.1.1
 ```
 
-##### 12.7.1.3 Establish Interconnected Network Using OpenWrt in Docker 
+##### 12.7.1.3 Establish Interconnected Network Using OpenWrt in Docker
 
 Modify the MAC address as needed.
 
@@ -1117,7 +1118,7 @@ net.ipv6.conf.lo.disable_ipv6 = 1
 
 #### 12.7.3 How to Enable Wireless
 
-Some devices support wireless networking. Enable it as follows:
+Some devices support wireless connectivity. For instructions on using the wireless AP mode, please refer to [the guide](https://github.com/ophub/amlogic-s9xxx-armbian/issues/3610#issuecomment-5161303377). For details on configuring the DHCP service in conjunction with this mode, please refer to [the guide](https://github.com/ophub/amlogic-s9xxx-armbian/issues/3610#issuecomment-5162533992). To use the wireless client mode, please refer to the instructions below:
 
 ```shell
 # Install management tool
@@ -1200,7 +1201,7 @@ bluetoothctl discoverable on
 bluetoothctl pair 12:34:56:78:90:AB
 
 # Check the paired Bluetooth devices
-blluetoothctl paired-devices
+bluetoothctl paired-devices
 
 # Connect to the Bluetooth device
 bluetoothctl connect 12:34:56:78:90:AB
@@ -1300,7 +1301,6 @@ If the Android boot logo is needed, the 852M + 32M (`852M~884M`) `logo` partitio
 - 100M~836M
 - 837M~852M
 - 884M~end
-
 
 #### 12.10.4 For eMMC Installation
 
@@ -1425,14 +1425,13 @@ Two types of files are generated: the `u-boot.bin` in the u-boot root directory 
 
 💡 Tip: Before writing to eMMC for testing, review section 12.3 for recovery methods. Ensure you know the short-circuit point location, have the original .img format Android system file, and have verified the short-circuit flashing process. Master all recovery methods before proceeding.
 
-
 #### 12.11.2 How to build the u-boot file for Rockchip devices
 
 Since most Rockchip device manufacturers have open-sourced their u-boot code, the relevant source code can be obtained directly from their repositories. Additionally, some open-source contributors have shared user-friendly u-boot compilation scripts. Below are several examples illustrating different compilation methods.
 
 ##### 12.11.2.1 How to use Radxa's u-boot building script
 
-Taking compiling [Rock5b(rk3588)](https://wiki.radxa.com/Rock5/guide/build-u-boot-on-5b) as an example.
+Taking the compilation of [Rock5B(rk3588)](https://wiki.radxa.com/Rock5/guide/build-u-boot-on-5b) as an example.
 
 ```shell
 # 01.Install the necessary build dependencies
@@ -1450,7 +1449,7 @@ git clone -b debian https://github.com/radxa/build.git
 # ~/rk3588-sdk/rkbin/: Pre-built Rockchip binaries, including first stage loader and ATF (Arm Trustzone Firmware)
 # ~/rk3588-sdk/u-boot/: Second stage bootloader used to start the OS (e.g. Linux or Android)
 
-# 03.Build u-boot （For ROCK 5B）
+# 03.Build u-boot (For ROCK 5B)
 cd ~/rk3588-sdk
 ./build/mk-uboot.sh rk3588-rock-5b
 
@@ -1465,15 +1464,13 @@ cd ~/rk3588-sdk
 
 By adding more options in `board_configs.sh` and `mk-uboot.sh` within the [radxa/build](https://github.com/radxa/build) source code, u-boot files for other devices can also be compiled. For example, see the instructions for compiling the [Beelink-IPC-R(rk3588)](https://github.com/ophub/amlogic-s9xxx-openwrt/issues/415#issuecomment-1508234307) device.
 
-
 ##### 12.11.2.2 How to use cm9vdA's u-boot building script
 
-cm9vdA provides scripts and instructions for compiling u-boot and the kernel in his open-source project [cm9vdA/build-linux](https://github.com/cm9vdA/build-linux). The following are documented compilation processes for various Rockchip devices:
+cm9vdA provides scripts and instructions for compiling u-boot and the kernel in their open-source project [cm9vdA/build-linux](https://github.com/cm9vdA/build-linux). The following are documented compilation processes for various Rockchip devices:
 
 - Build u-boot for Lenovo-Leez-P710 (rk3399) device: [Link](https://github.com/ophub/amlogic-s9xxx-armbian/issues/1609#issuecomment-1681494735)
 - Build u-boot for DLFR100 (rk3399) device: [Link](https://github.com/ophub/amlogic-s9xxx-armbian/issues/1522#issuecomment-1622919423)
 - Build u-boot for ZYSJ (rk3399) device: [Link](https://github.com/ophub/amlogic-s9xxx-armbian/issues/1380#issuecomment-1539325464)
-
 
 ### 12.12 Error in Memory Size Recognition
 
@@ -1483,7 +1480,9 @@ Do not manually copy the u-boot file for any other purpose. Incorrect u-boot fil
 
 ### 12.13 How to Decompile dtb Files
 
-Some new devices are not currently supported (or have hardware variants). Try adjusting related parameters by decompiling the dtb file.
+#### 12.13.1 Directly Decompile dtb Files
+
+You can directly decompile existing dtb files and adapt by adjusting related parameters.
 
 ```shell
 # Install dependencies
@@ -1498,11 +1497,19 @@ dtc -I dts -O dtb -o xxx.dtb xxx.dts
 
 # 3. Save data and reboot
 sync && reboot
-
-# 4. [Optional action] Perform testing based on requirements
-# e.g., reinstall for testing when addressing the issue mentioned in 12.16
-armbian-install
 ```
+
+#### 12.13.2 Export Full-State DTS from a Running Device (Recommended)
+
+During the adaptation and maintenance of certain devices, we may only have access to the compiled binary device tree file (.dtb), while the corresponding kernel source code (.dts) is unavailable. In such cases, it is recommended to run the following command on a properly functioning Armbian system to directly decompile and export the currently active device tree from the kernel runtime environment:
+
+```shell
+dtc -I fs -O dts /sys/firmware/devicetree/base > my_runtime.dts
+```
+
+This command extracts device tree data directly from kernel memory, producing a more accurate and complete text output than simply decompiling the static .dtb file on disk. This is because the bootloader (such as U-Boot) or system firmware dynamically modifies or injects the device tree based on actual hardware detection results during the boot phase (for example: updating bootargs boot parameters in real time, dynamically toggling the status of specific peripherals, or adjusting reg register addresses). Decompiling the static file on disk directly will not capture these runtime changes.
+
+The Runtime device tree obtained through this method represents the final applied form used by the kernel, accurately reflecting the actual topology and operational state of the hardware at the system's low level. When referencing, fixing, or re-adapting the .dts source code for the device, this file is of great reference value, making conflict troubleshooting and peripheral configuration completion more accurate and efficient.
 
 ### 12.14 How to Modify cmdline Settings
 
@@ -1626,9 +1633,20 @@ For implementation details, refer to the `write_board_bootloader` function in [/
 
 Add the corresponding `BOARD` option to `armbian_board` in the [yml workflow control file](../.github/workflows/build-armbian-arm64-server-image.yml), which supports use in `Actions` on github.com.
 
-### 12.16 How to Resolve the Issue of I/O Errors While Writing to eMMC
+### 12.16 How to Resolve System Boot Failures or eMMC Write I/O Errors Caused by DTB Frequency
 
-Some devices can boot Armbian normally from USB/SD/TF but report I/O write errors when writing to eMMC, such as the case in [Issues](https://github.com/ophub/amlogic-s9xxx-armbian/issues/989):
+When the DTB frequency is set too high, some devices may fail to boot properly and become stuck on the boot screen. An example can be seen in this [Issue](https://github.com/ophub/amlogic-s9xxx-armbian/issues/3678#issuecomment-5749939734), with the following error output:
+
+```shell
+Loading, please wait...
+Starting systemd-udevd version 259.5-0ubuntus.4
+Begin: Loading essential drivers ... done.
+Begin: Running /scripts/init-premount ... done.
+Begin: Mounting root file system... Begin: Running /scripts/local-top ... done.
+Begin: Running /scripts/local-premount ... Scanning for Btrfs filesystems
+```
+
+Some devices can boot Armbian normally from USB/SD/TF but report I/O write errors when writing to eMMC, such as the case in this [Issue](https://github.com/ophub/amlogic-s9xxx-armbian/issues/989):
 
 ```shell
 [  284.338449] I/O error, dev mmcblk2, sector 0 op 0x1:(WRITE) flags 0x800 phys_seg 1 prio class 2
@@ -1714,8 +1732,8 @@ sudo apt-get install -y u-boot-tools
 
 # Edit the boot.cmd file
 cd /boot
-copy /boot/boot.cmd /boot/boot.cmd.bak
-copy /boot/boot.scr /boot/boot.scr.bak
+cp /boot/boot.cmd /boot/boot.cmd.bak
+cp /boot/boot.scr /boot/boot.scr.bak
 nano boot.cmd
 
 # Compile the boot.scr file
@@ -1755,3 +1773,47 @@ net.ipv4.tcp_congestion_control = bbr
 # net.core.default_qdisc = fq_codel
 # net.ipv4.tcp_congestion_control = cubic
 ```
+
+### 12.21 How to Fix HDMI EDID Detection Problems
+
+**Use cases**: On some devices the HDMI port cannot read the EDID from the monitor (the monitor's EDID chip never answers on the DDC bus — a board-level hardware trait), so the kernel never obtains the monitor's capability list. The symptom is no display output at all, or output only at the 1024x768 fallback resolution (a typical case is bdy-g98; see [ophub/fnnas#606](https://github.com/ophub/fnnas/issues/606#issuecomment-5282389038) for details). Similarly, EDID can be lost or corrupted when using a KVM switch or an HDMI adapter/capture device; or in headless (no-monitor) setups you may want the system to always output at a fixed resolution. All of these cases can be solved by force-feeding an EDID firmware file via kernel parameters, bypassing the read from the monitor.
+
+**How it works**: The system image ships with a built-in initramfs hook that automatically bundles all EDID firmware files under `/lib/firmware/edid/` (about 30 common resolutions pre-installed) into the initramfs every time it is generated/rebuilt. The mechanism stays dormant by default — unless the kernel parameter is added, the bundled files have no effect at all.
+
+**How to enable**: Edit `/boot/armbianEnv.txt` and append to the end of the `extraargs=` line (6.x kernel example):
+
+```shell
+extraargs=video=HDMI-A-1:e drm.edid_firmware=HDMI-A-1:edid/1920x1080.bin
+```
+
+Here `video=HDMI-A-1:e` force-enables the interface (optional), and `drm.edid_firmware=` specifies the EDID file to use (path relative to `/lib/firmware/`). Three common pitfalls:
+
+- The config file may be `/boot/armbianEnv.txt`, `/boot/uEnv.txt`, or `/boot/extlinux/extlinux.conf`, etc. — modify whichever one your device actually uses.
+- **The parameter prefix depends on the kernel version**: 6.x kernels use `drm.edid_firmware`, while earlier kernels use `drm_kms_helper.edid_firmware`. If unsure, check on the device: if `/sys/module/drm/parameters/edid_firmware` exists, use the `drm.` prefix; otherwise look for the file with the same name under `/sys/module/drm_kms_helper/parameters/`. A wrong prefix is silently ignored by the kernel — no error, no effect.
+- The interface name is not necessarily `HDMI-A-1`; check the actual name on your device with `ls /sys/class/drm/ | grep HDMI`.
+
+After saving, rebuild the initramfs and reboot:
+
+```shell
+# If you see "update-initramfs: Not updating initramfs.", run this first:
+sed -i 's/^update_initramfs=.*/update_initramfs=yes/' /etc/initramfs-tools/update-initramfs.conf
+
+update-initramfs -u -k $(uname -r)
+reboot
+```
+
+**Verification**:
+
+```shell
+lsinitramfs /boot/initrd.img-$(uname -r) | grep edid   # the edid files should be visible in the initramfs
+dmesg | grep -i edid                                   # confirm the firmware was loaded by the kernel
+cat /sys/class/drm/card0-HDMI-A-1/modes                # the target resolution appears = it works
+```
+
+**Changing the resolution**: Pick another pre-installed file from the list shown by `ls /lib/firmware/edid/` (e.g. `1920x1080_50hz.bin`), point the kernel parameter at the new file name, then re-run the `update-initramfs` command above and reboot. You can also drop in a custom EDID file (a 128-byte base block, or a multi-block file with extension blocks) — the procedure is the same.
+
+**Notes**:
+
+- The pre-installed EDID files contain no CTA extension block, so **HDMI audio will not work**; if you need audio, use an EDID file with an extension block.
+- The kernel must be built with `CONFIG_DRM_LOAD_EDID_FIRMWARE=y` (already enabled in the kernels compiled from this repository).
+- To restore automatic monitor detection: remove the two parameters from `extraargs` and reboot — nothing else is needed.

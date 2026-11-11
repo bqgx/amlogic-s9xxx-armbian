@@ -70,6 +70,49 @@ if [[ "${FDTFILE}" == "meson-sm1-skyworth-lb2004-a4091.dtb" ]]; then
     log_message "Attempted to load btmtksdio module for Tencent-Aurora-3Pro."
 fi
 
+# For M401A/UNT403A/B863AV3.2-M (s905l3a) box: enable 3.5mm analog audio
+if [[ "${FDTFILE}" == "meson-g12a-s905l3a-m401a.dtb" ]]; then
+    (
+        # Wait (at most ~15s) for the sound card to be registered
+        audio_card=""
+        for _ in $(seq 1 15); do
+            if [[ -d "/proc/asound/card0" ]]; then
+                audio_card="0"
+                break
+            fi
+            sleep 1
+        done
+        if [[ -z "${audio_card}" ]]; then
+            log_message "M401A analog audio: no sound card found, skipped."
+            exit 0
+        fi
+
+        # Route and unmute the analog path (best effort, never fail the boot)
+        if command -v amixer >/dev/null 2>&1; then
+            amixer -c "${audio_card}" sset 'TOACODEC OUT EN' on >/dev/null 2>&1 || true
+            amixer -c "${audio_card}" sset 'TOACODEC SRC' 'I2S B' >/dev/null 2>&1 || true
+            amixer -c "${audio_card}" sset 'ACODEC Playback Switch' on >/dev/null 2>&1 || true
+            amixer -c "${audio_card}" sset 'ACODEC' 85% >/dev/null 2>&1 || true
+            # Persist mixer state so alsactl restore can re-apply it later
+            alsactl store "${audio_card}" >/dev/null 2>&1 || true
+        else
+            log_message "M401A analog audio: amixer not found, mixer setup skipped."
+        fi
+
+        # Release the hardware mute GPIO (gpiochip0 line2). Only touch it when
+        # line 2 is free, in case a board sharing this dtb uses it differently.
+        if command -v gpioset >/dev/null 2>&1; then
+            gpio_line_info="$(gpioinfo 0 2>/dev/null | grep -E '^[[:space:]]*line[[:space:]]+2:' | head -n1 || true)"
+            if [[ -n "${gpio_line_info}" && "${gpio_line_info}" == *"unnamed"* && "${gpio_line_info}" == *"unused"* ]]; then
+                gpioset -s 1 -m time 0 2=0 >/dev/null 2>&1 || true
+            else
+                log_message "M401A analog audio: gpiochip0 line2 unavailable or in use (${gpio_line_info:-not found}), GPIO unmute skipped."
+            fi
+        fi
+    ) &
+    log_message "3.5mm analog audio setup scheduled for M401A."
+fi
+
 # For swan1-w28(rk3568) board: USB power and switch control
 if [[ "${FDTFILE}" == "rk3568-swan1-w28.dtb" ]]; then
     (
@@ -80,6 +123,41 @@ if [[ "${FDTFILE}" == "rk3568-swan1-w28.dtb" ]]; then
         gpioset 4 22=1 >/dev/null 2>&1
     ) &
     log_message "USB power control GPIOs set for Swan1-w28."
+fi
+
+# For rk3399-zysj board: release the on-board USB HUB reset
+if [[ "${FDTFILE}" == "rk3399-zysj.dtb" ]]; then
+    (
+        # The 5V rails (vcc-sys / vcc5v0-host / vbus-typec) are already driven high by
+        # their regulators, but the USB HUB reset line (usb-hub-res = gpio1.18) is left
+        # un-driven, so the HUB stays in reset and none of the expanded ports enumerate.
+        # Resolve the sysfs numbers from each gpiochip base, because newer kernels (6.18)
+        # allocate the base dynamically and gpio0 no longer starts at 0.
+        gpio1_base="" gpio4_base=""
+        for chip in /sys/class/gpio/gpiochip*; do
+            case "$(cat "${chip}/label" 2>/dev/null)" in
+            gpio1) gpio1_base="$(cat "${chip}/base" 2>/dev/null)" ;;
+            gpio4) gpio4_base="$(cat "${chip}/base" 2>/dev/null)" ;;
+            esac
+        done
+        if [[ -n "${gpio1_base}" && -n "${gpio4_base}" ]]; then
+            pwr_en="$((gpio4_base + 28))"  # gpio4.28, board GPIO note "156"
+            hub_rst="$((gpio1_base + 18))" # gpio1.18, usb-hub-res
+
+            # Assert the extra power enable.
+            echo "${pwr_en}" >/sys/class/gpio/export 2>/dev/null
+            echo "out" >"/sys/class/gpio/gpio${pwr_en}/direction" 2>/dev/null
+            echo "1" >"/sys/class/gpio/gpio${pwr_en}/value" 2>/dev/null
+
+            # Release the USB HUB reset (gpio1.18) with a short low->high pulse.
+            echo "${hub_rst}" >/sys/class/gpio/export 2>/dev/null
+            echo "out" >"/sys/class/gpio/gpio${hub_rst}/direction" 2>/dev/null
+            echo "0" >"/sys/class/gpio/gpio${hub_rst}/value" 2>/dev/null
+            sleep 1
+            echo "1" >"/sys/class/gpio/gpio${hub_rst}/value" 2>/dev/null
+        fi
+    ) &
+    log_message "USB HUB reset released for rk3399-zysj."
 fi
 
 # For smart-am60(rk3588)/orangepi-5b(rk3588s) board: Bluetooth control
@@ -115,6 +193,17 @@ if [[ "${FDTFILE}" =~ ^(rk3568-nsy-g16-plus\.dtb|rk3568-nsy-g68-plus\.dtb|rk3568
         fi
     ) &
     log_message "Network optimizations for ${FDTFILE} applied."
+fi
+
+# For bdy-g98(rk3588) board: the two 2.5G PCIe NICs (RTL8125/8126) may ship
+# with a blank config EEPROM, in which case the driver falls back to a random
+# MAC on every boot. The script derives a stable per-unit MAC and persists it
+# via a .link file (applied by udev from the next boot on), and also sets it
+# immediately so the very first boot is covered. Units with a factory MAC are
+# left untouched.
+if [[ "${FDTFILE}" == "rk3588-bdy-g98.dtb" && -x "/usr/local/sbin/g98-nic-mac-fix.sh" ]]; then
+    /usr/local/sbin/g98-nic-mac-fix.sh >>"${custom_log}" 2>&1
+    log_message "G98 2.5G NIC MAC fix executed."
 fi
 
 # General System Services
